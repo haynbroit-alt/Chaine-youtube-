@@ -1,0 +1,3 @@
+# Exemple cron (sur la machine hôte) — adapter les chemins.
+# Télécharger le digest chaque jour à 8h :
+# 0 8 * * * cd /chemin/vers/repo && /usr/bin/python3 -m productivity_kit digest >> /var/log/kit-digest.log 2>&1
