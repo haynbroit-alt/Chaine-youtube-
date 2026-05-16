@@ -1,3 +1,3 @@
-"""Petit kit local : API légère, CSV, organisation de fichiers."""
+"""Kit local : API, CSV, fichiers, IMAP, webhooks, digest."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

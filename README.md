@@ -1,39 +1,89 @@
-# Kit productivité (local)
+# Kit productivité
 
-Base légère pour **automatiser un peu** le travail du quotidien : petite API, résumé de CSV, rangement de fichiers. Aucun revenu n’est garanti ; à adapter à votre activité.
+Ensemble **installable et documenté** pour automatiser en local : **API HTTP**, **CLI**, **CSV**, **rangement de fichiers**, **messagerie IMAP**, **webhooks**, **digest planifiable**, **Docker** et **tests**. À brancher sur une activité réelle (veille, chaîne, admin) — sans promesse de revenus.
+
+## Fonctionnalités
+
+| Zone | Détail |
+|------|--------|
+| API | `FastAPI` : santé, version, état de config, digest, résumé CSV uploadé |
+| CLI | `python -m productivity_kit` : `serve`, `csv-summary`, `organize`, `mail-list`, `digest`, `version` |
+| Fichiers | Classement par extension (module + script) |
+| E-mail | Lecture IMAP (en-têtes uniquement, `BODY.PEEK[HEADER]`) |
+| Notifications | POST JSON vers `WEBHOOK_URL` (Slack, Discord incoming, n8n, etc.) |
+| Planification | Exemple `schedules/crontab.example` |
+| Conteneur | `Dockerfile` + `docker-compose.yml` |
 
 ## Installation
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
+# développement / CI
+python3 -m pip install -r requirements-dev.txt
 ```
 
-## API (FastAPI)
+Copiez la configuration :
 
 ```bash
-uvicorn productivity_kit.api:app --reload --host 127.0.0.1 --port 8000
+cp .env.example .env
+# éditez .env (IMAP et webhook sont optionnels)
 ```
 
-- `GET http://127.0.0.1:8000/health` — statut
-- `POST http://127.0.0.1:8000/csv/summary` — corps `multipart/form-data`, champ `file` = fichier `.csv` UTF-8
-
-## Scripts
-
-Résumé JSON d’un CSV :
+## CLI
 
 ```bash
-python scripts/csv_summary.py examples/sample.csv
+python3 -m productivity_kit --help
+python3 -m productivity_kit serve --help
+python3 -m productivity_kit csv-summary examples/sample.csv
+python3 -m productivity_kit organize ~/Downloads --dry-run
+python3 -m productivity_kit mail-list          # nécessite IMAP dans .env
+python3 -m productivity_kit digest               # IMAP + webhook + rangement optionnels
 ```
 
-Organiser les fichiers d’un dossier par extension (sous-dossiers `pdf`, `jpg`, etc.) :
+## API
 
 ```bash
-python scripts/organize_folder.py ~/Downloads --dry-run
-python scripts/organize_folder.py ~/Downloads
+python3 -m productivity_kit serve
+# ou
+python3 -m uvicorn productivity_kit.api:app --host 127.0.0.1 --port 8000
 ```
 
-## Suite possible
+| Méthode | Chemin | Rôle |
+|---------|--------|------|
+| GET | `/health` | Statut |
+| GET | `/version` | Version + nom d’app |
+| GET | `/ready` | Indicateurs de config (sans secrets) |
+| POST | `/jobs/digest` | Lance le digest (effets de bord possibles : webhook, rangement) |
+| POST | `/csv/summary` | `multipart/form-data`, champ `file` = `.csv` UTF-8 |
 
-Brancher la messagerie (IMAP), des webhooks, ou un planning (cron) autour de ces briques selon vos besoins réels.
+Documentation interactive : `http://127.0.0.1:8000/docs`
+
+## Variables d’environnement
+
+Voir `.env.example` : `API_*`, `CORS_ORIGINS`, `IMAP_*`, `WEBHOOK_*`, `ORGANIZE_*`.
+
+- **`ORGANIZE_ON_DIGEST=true`** : lors d’un digest, range aussi `ORGANIZE_FOLDER` (à utiliser avec prudence).
+- **`IMAP_UNSEEN_ONLY=true`** : ne liste que les non lus.
+
+## Docker
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+L’API écoute sur le port **8000** du conteneur.
+
+## Tests
+
+```bash
+python3 -m pytest
+```
+
+## Scripts (compatibilité)
+
+Les scripts sous `scripts/` restent utilisables ; la CLI les remplace pour un flux unique.
+
+## Sécurité
+
+Ne commitez pas `.env`. Les mots de passe IMAP ne sont jamais journalisés par ce kit ; limitez les droits du fichier `.env` sur votre machine.

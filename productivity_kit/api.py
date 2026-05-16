@@ -4,19 +4,58 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
+from productivity_kit import __version__
 from productivity_kit.csv_tools import summarize_csv
+from productivity_kit.jobs import run_digest
+from productivity_kit.settings import get_settings
+
+_bootstrap = get_settings()
 
 app = FastAPI(
-    title="Kit productivité",
-    description="API locale : santé, résumé de CSV uploadé.",
-    version="0.1.0",
+    title=_bootstrap.app_name,
+    description="API locale : santé, version, digest, résumé CSV.",
+    version=__version__,
 )
+
+if _bootstrap.cors_origins_list:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_bootstrap.cors_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/version")
+def version() -> dict[str, str]:
+    s = get_settings()
+    return {"version": __version__, "app": s.app_name}
+
+
+@app.get("/ready")
+def ready() -> dict[str, bool | int | str]:
+    s = get_settings()
+    return {
+        "imap_configured": s.imap_configured,
+        "webhook_configured": bool(s.webhook_url),
+        "organize_on_digest": s.organize_on_digest,
+        "organize_folder_set": bool(s.organize_folder),
+        "imap_limit": s.imap_limit,
+    }
+
+
+@app.post("/jobs/digest")
+def jobs_digest() -> dict[str, object]:
+    """Exécute le digest (IMAP + webhook optionnel + rangement optionnel)."""
+    return run_digest(get_settings())
 
 
 @app.post("/csv/summary")

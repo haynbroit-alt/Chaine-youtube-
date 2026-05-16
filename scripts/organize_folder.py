@@ -4,8 +4,14 @@
 from __future__ import annotations
 
 import argparse
-import shutil
+import sys
 from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from productivity_kit.organize import organize_folder  # noqa: E402
 
 
 def main() -> None:
@@ -20,27 +26,8 @@ def main() -> None:
     root: Path = args.folder.resolve()
     if not root.is_dir():
         raise SystemExit(f"Dossier introuvable: {root}")
-
-    for item in root.iterdir():
-        if not item.is_file():
-            continue
-        ext = item.suffix.lower().lstrip(".") or "sans_extension"
-        dest_dir = root / ext
-        dest = dest_dir / item.name
-        if dest_dir == root:
-            continue
-        if args.dry_run:
-            print(f"mv {item} -> {dest}")
-        else:
-            dest_dir.mkdir(exist_ok=True)
-            if dest.exists():
-                stem, suf = item.stem, item.suffix
-                n = 1
-                while dest.exists():
-                    dest = dest_dir / f"{stem}_{n}{suf}"
-                    n += 1
-            shutil.move(str(item), str(dest))
-            print(f"déplacé: {item.name} -> {dest.relative_to(root)}")
+    for line in organize_folder(root, dry_run=args.dry_run):
+        print(line)
 
 
 if __name__ == "__main__":
