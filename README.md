@@ -76,7 +76,7 @@ L’API écoute sur le port **8000** du conteneur.
 
 ## Vercel
 
-Le fichier `pyproject.toml` expose l’application via `[tool.vercel] entrypoint = "productivity_kit.api:app"`, comme attendu par le [déploiement FastAPI sur Vercel](https://vercel.com/docs/frameworks/backend/fastapi). Définissez les variables d’environnement dans le projet Vercel (équivalent de `.env`).
+Le fichier `pyproject.toml` expose l’application via `[tool.vercel] entrypoint = "productivity_kit.api:app"`, comme attendu par le [déploiement FastAPI sur Vercel](https://vercel.com/docs/frameworks/backend/fastapi). Le fichier `api/index.py` réexporte aussi `app` pour les builds qui ne lisent que les chemins conventionnels. Définissez les variables d’environnement dans le projet Vercel (équivalent de `.env`).
 
 ## Tests
 
