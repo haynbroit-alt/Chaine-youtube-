@@ -9,10 +9,19 @@ def test_pwa_index_served() -> None:
     assert r.status_code == 200
     assert "youtube/summarize" in r.text
     assert "csv/summary" in r.text
+    assert "/manifest.json" in r.text
 
 
-def test_pwa_manifest() -> None:
+def test_web_manifest_root() -> None:
     c = TestClient(app)
-    r = c.get("/pwa/manifest.json")
+    r = c.get("/manifest.json")
     assert r.status_code == 200
-    assert "Kit productivité" in r.text or "Kit productivit" in r.text
+    assert "Kit Productivité" in r.text
+    assert '"start_url": "/"' in r.text
+    assert "icon-192.png" in r.text
+
+
+def test_pwa_icons() -> None:
+    c = TestClient(app)
+    assert c.get("/icon-192.png").status_code == 200
+    assert c.get("/icon-512.png").status_code == 200

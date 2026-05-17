@@ -16,6 +16,9 @@ def landing_page_html(*, streamlit_url: str | None) -> str:
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#1E3A8A"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="icon" href="/icon-192.png" type="image/png"/>
   <title>Kit productivité</title>
   <style>
     body {{

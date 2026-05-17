@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from productivity_kit import __version__
 from productivity_kit.csv_tools import summarize_csv
@@ -68,6 +68,33 @@ def root() -> str:
     s = get_settings()
     url = (s.streamlit_public_url or "").strip() or None
     return landing_page_html(streamlit_url=url)
+
+
+_PUBLIC_ROOT = Path(__file__).resolve().parent.parent / "public"
+
+
+@app.get("/manifest.json", include_in_schema=False)
+def web_app_manifest() -> FileResponse:
+    p = _PUBLIC_ROOT / "manifest.json"
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail="manifest introuvable")
+    return FileResponse(p, media_type="application/manifest+json")
+
+
+@app.get("/icon-192.png", include_in_schema=False)
+def icon_192() -> FileResponse:
+    p = _PUBLIC_ROOT / "icon-192.png"
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail="icône introuvable")
+    return FileResponse(p, media_type="image/png")
+
+
+@app.get("/icon-512.png", include_in_schema=False)
+def icon_512() -> FileResponse:
+    p = _PUBLIC_ROOT / "icon-512.png"
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail="icône introuvable")
+    return FileResponse(p, media_type="image/png")
 
 
 @app.get(

@@ -46,7 +46,7 @@ Pour afficher un lien vers Streamlit sur la page d’accueil de l’API (HTML à
 
 ## Interface PWA (navigateur, même site que l’API)
 
-Une **mini-application** est servie sous **`/pwa/`** : résumé YouTube (`POST /youtube/summarize`) et analyse CSV (`POST /csv/summary`), sans URL codée en dur (utilise `window.location.origin`). Fichiers dans `public/pwa/` (`manifest.json`, `sw.js`, `icon.svg`). Depuis la page d’accueil `/`, un lien **« Interface PWA »** est proposé.
+Une **mini-application** est servie sous **`/pwa/`** : résumé YouTube (`POST /youtube/summarize`) et analyse CSV (`POST /csv/summary`), sans URL codée en dur (utilise `window.location.origin`). Le fichier **`/manifest.json`** (installable, `start_url` : `/`) et les icônes **`/icon-192.png`**, **`/icon-512.png`** sont à la racine du dossier `public/`. Un **service worker** minimal reste sous `/pwa/sw.js`.
 
 ## CLI
 
@@ -71,6 +71,9 @@ python3 -m uvicorn productivity_kit.api:app --host 127.0.0.1 --port 8000
 |---------|--------|------|
 | GET | `/` | Page d’accueil HTML (liens `/docs`, `/pwa/`, Streamlit si `STREAMLIT_PUBLIC_URL`) |
 | GET | `/pwa/` | Application légère (formulaires YouTube + CSV, installable) |
+| GET | `/manifest.json` | Manifest Web App (`start_url` `/`) |
+| GET | `/icon-192.png`, `/icon-512.png` | Icônes PWA |
+| GET | `/health` | Disponibilité : `{"statut": "disponible"}` |
 | GET | `/version` | `version`, `nom` |
 | GET | `/ready` | Indicateurs en français (`messagerie_imap_configuree`, `cle_openai_configuree`, `serveur_ollama_defini`, …) |
 | POST | `/youtube/summarize` | JSON avec `use_llm` : priorité **OpenAI** si clé présente, sinon **Ollama** si `OLLAMA_BASE_URL` — champ `fournisseur_ia` dans la réponse (`openai` / `ollama` / `null`) |
