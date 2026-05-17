@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from productivity_kit import __version__
 from productivity_kit.csv_tools import summarize_csv
@@ -27,6 +28,12 @@ if _bootstrap.cors_origins_list:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+@app.get("/")
+def root() -> RedirectResponse:
+    """Racine : renvoie vers la doc interactive (évite une page « Not Found » vide)."""
+    return RedirectResponse(url="/docs", status_code=307)
 
 
 @app.get("/health")

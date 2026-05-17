@@ -50,6 +50,7 @@ python3 -m uvicorn productivity_kit.api:app --host 127.0.0.1 --port 8000
 
 | Méthode | Chemin | Rôle |
 |---------|--------|------|
+| GET | `/` | Redirection vers `/docs` (interface Swagger) |
 | GET | `/health` | Statut |
 | GET | `/version` | Version + nom d’app |
 | GET | `/ready` | Indicateurs de config (sans secrets) |

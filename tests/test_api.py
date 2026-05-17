@@ -6,6 +6,13 @@ from fastapi.testclient import TestClient
 from productivity_kit.api import app
 
 
+def test_root_redirects_to_docs() -> None:
+    c = TestClient(app)
+    r = c.get("/", follow_redirects=False)
+    assert r.status_code == 307
+    assert r.headers.get("location") == "/docs"
+
+
 def test_health_and_version() -> None:
     c = TestClient(app)
     assert c.get("/health").json() == {"status": "ok"}
