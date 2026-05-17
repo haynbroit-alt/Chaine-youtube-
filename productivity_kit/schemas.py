@@ -15,7 +15,10 @@ class YoutubeSummarizeRequest(BaseModel):
     )
     use_llm: bool = Field(
         default=False,
-        description="Si vrai : résumé par intelligence artificielle (clé OPENAI_API_KEY requise). Sinon : résumé automatique gratuit à partir du texte",
+        description=(
+            "Si vrai : résumé par modèle de langage. Priorité : OPENAI_API_KEY si présente, "
+            "sinon serveur **Ollama** (OLLAMA_BASE_URL, ex. http://127.0.0.1:11434). Sinon : résumé automatique gratuit."
+        ),
     )
 
 
@@ -27,4 +30,7 @@ class YoutubeBatchRequest(BaseModel):
         description="Liste d’adresses YouTube à traiter l’une après l’autre",
     )
     template: TemplateId = Field(default="court", description="Modèle de résumé pour toutes les vidéos")
-    use_llm: bool = Field(default=False, description="Utiliser l’IA OpenAI pour chaque vidéo")
+    use_llm: bool = Field(
+        default=False,
+        description="Même logique que pour une seule vidéo : OpenAI en priorité, sinon Ollama si configuré.",
+    )

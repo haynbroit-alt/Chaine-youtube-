@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     streamlit_public_url: str = ""
 
+    ollama_base_url: str = ""
+    ollama_model: str = "llama3.2:3b"
+    ollama_timeout_s: float = 120.0
+
     @property
     def cors_origins_list(self) -> list[str]:
         raw = self.cors_origins.strip()
@@ -51,6 +55,10 @@ class Settings(BaseSettings):
     @property
     def imap_configured(self) -> bool:
         return bool(self.imap_host and self.imap_user and self.imap_password)
+
+    @property
+    def ollama_est_configure(self) -> bool:
+        return bool(self.ollama_base_url.strip())
 
 
 @lru_cache

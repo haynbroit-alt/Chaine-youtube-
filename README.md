@@ -8,7 +8,7 @@ Ensemble **installable et documenté** : **API FastAPI** (CSV, YouTube, digest),
 |------|--------|
 | Interface | **Streamlit** (`streamlit_app.py`) : déposer un CSV, coller une URL YouTube → résumé |
 | API | **FastAPI** : santé, version, page d’accueil HTML, digest, CSV simple / **lot**, **YouTube** (sous-titres) |
-| YouTube | Résumé **extractif** (gratuit) ou **OpenAI** (`OPENAI_API_KEY`, modèles `OPENAI_MODEL`) |
+| YouTube | Résumé **automatique** (gratuit) ou **IA** : **OpenAI** (`OPENAI_API_KEY`) ou **Ollama** local (`OLLAMA_BASE_URL`) |
 | CLI | `python -m productivity_kit` : `serve`, `csv-summary`, `organize`, `mail-list`, `digest`, `version` |
 | Fichiers | Classement par extension (module + script) |
 | E-mail | Lecture IMAP (en-têtes, `BODY.PEEK[HEADER]`) |
@@ -40,7 +40,7 @@ cd /chemin/vers/le/repo
 python3 -m streamlit run streamlit_app.py
 ```
 
-Onglets **CSV** et **YouTube**. Pour les résumés IA, renseignez `OPENAI_API_KEY` dans `.env`.
+Onglets **CSV** et **YouTube**. Pour l’IA : `OPENAI_API_KEY` et/ou `OLLAMA_BASE_URL` dans `.env`.
 
 Pour afficher un lien vers Streamlit sur la page d’accueil de l’API (HTML à `/`), renseignez `STREAMLIT_PUBLIC_URL` (ex. URL Streamlit Cloud).
 
@@ -68,8 +68,8 @@ python3 -m uvicorn productivity_kit.api:app --host 127.0.0.1 --port 8000
 | GET | `/` | Page d’accueil HTML (liens `/docs`, Streamlit si `STREAMLIT_PUBLIC_URL`) |
 | GET | `/health` | Disponibilité : `{"statut": "disponible"}` |
 | GET | `/version` | `version`, `nom` |
-| GET | `/ready` | Indicateurs en français (`messagerie_imap_configuree`, `cle_openai_configuree`, …) |
-| POST | `/youtube/summarize` | JSON `{ "url", "template": "court"\|"detaille"\|"decision", "use_llm" }` — champ `mode` du résumé : `automatique` ou `ia` |
+| GET | `/ready` | Indicateurs en français (`messagerie_imap_configuree`, `cle_openai_configuree`, `serveur_ollama_defini`, …) |
+| POST | `/youtube/summarize` | JSON avec `use_llm` : priorité **OpenAI** si clé présente, sinon **Ollama** si `OLLAMA_BASE_URL` — champ `fournisseur_ia` dans la réponse (`openai` / `ollama` / `null`) |
 | POST | `/youtube/batch-summarize` | JSON `urls` — réponse : `nombre`, `resultats[]` avec `reussi`, `donnees` ou `erreur` |
 | POST | `/jobs/digest` | Digest (IMAP + webhook + rangement optionnels) |
 | POST | `/csv/summary` | Un CSV : `multipart/form-data`, champ `file` |
@@ -85,7 +85,7 @@ La documentation interactive **/docs** (Swagger) est rédigée en **français** 
 
 ## Variables d’environnement
 
-Voir `.env.example` : `API_*`, `CORS_ORIGINS`, `IMAP_*`, `WEBHOOK_*`, `ORGANIZE_*`, **`OPENAI_*`**, **`STREAMLIT_PUBLIC_URL`**.
+Voir `.env.example` : `API_*`, `CORS_ORIGINS`, `IMAP_*`, `WEBHOOK_*`, `ORGANIZE_*`, **`OPENAI_*`**, **`OLLAMA_*`**, **`STREAMLIT_PUBLIC_URL`**.
 
 - **`ORGANIZE_ON_DIGEST=true`** : lors d’un digest, range aussi `ORGANIZE_FOLDER` (à utiliser avec prudence).
 - **`IMAP_UNSEEN_ONLY=true`** : ne liste que les non lus.
@@ -98,6 +98,17 @@ docker compose up --build
 ```
 
 L’API écoute sur le port **8000** du conteneur.
+
+## Autonomie, smartphone et hors-ligne
+
+Ce dépôt est une **application Python** (FastAPI + Streamlit), pas une application **native** Android/iOS comme *SummaryYou* ou *Off Grid*. Pour un téléphone **100 % autonome sans nuage**, ces applis restent les références les plus réalistes en 2026.
+
+**Ce que ce kit permet toutefois :**
+
+- **CSV** : entièrement **local** une fois le fichier sur la machine (aucune API obligatoire).
+- **YouTube** : récupérer les sous-titres **exige un accès réseau** vers YouTube (sauf si vous importez vous-même un fichier texte — non prévu dans l’interface actuelle).
+- **IA sans OpenAI** : si vous lancez **[Ollama](https://ollama.com)** sur votre PC ou votre box (ou Termux + Ollama sur un appareil puissant), renseignez `OLLAMA_BASE_URL` (ex. `http://127.0.0.1:11434`). L’option « intelligence artificielle » utilisera **Ollama en priorité** si `OPENAI_API_KEY` est absente. La réponse JSON indique `fournisseur_ia` : `ollama` ou `openai`.
+- **Sur smartphone** : vous pouvez faire tourner ce code dans **Termux** + Python (solution experte), ou utiliser le téléphone uniquement comme client vers un **Ollama sur le Wi‑Fi domestique** — le téléphone n’exécute pas les modèles, mais **aucune donnée ne part vers un SaaS** si vous n’utilisez pas OpenAI ni les webhooks distants.
 
 ## Vercel
 
@@ -113,6 +124,7 @@ Le fichier `pyproject.toml` contient une section `[project]` (dépendances pour 
 | Export PDF / e-mail / Drive | **Pas fait** |
 | Bot Telegram / Discord | **Pas fait** |
 | Cache résultats YouTube | **Pas fait** |
+| IA locale (Ollama) | **Fait** : `OLLAMA_BASE_URL` + `OLLAMA_MODEL` ; priorité OpenAI si les deux sont définis |
 | Statistiques d’usage | **Pas fait** |
 
 ## Tests

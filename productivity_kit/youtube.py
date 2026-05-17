@@ -4,6 +4,7 @@ import asyncio
 import re
 from typing import Literal
 
+import httpx
 from youtube_transcript_api import YouTubeTranscriptApi
 
 TemplateId = Literal["court", "detaille", "decision"]
@@ -12,6 +13,22 @@ YOUTUBE_RE = re.compile(
     r"(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})",
     re.IGNORECASE,
 )
+
+_LLM_PROMPTS: dict[TemplateId, str] = {
+    "court": (
+        "Résume la transcription en exactement 3 puces courtes, en français, "
+        "sans introduction inutile."
+    ),
+    "detaille": (
+        "Produis un résumé structuré en français : contexte, points clés par "
+        "thème, et conclusion. Utilise des sous-titres Markdown (##)."
+    ),
+    "decision": (
+        "À partir de la transcription, rédige en français : avantages, "
+        "inconvénients / risques, et une recommandation claire (1 phrase). "
+        "Format Markdown avec listes."
+    ),
+}
 
 
 def extract_video_id(url: str) -> str | None:
@@ -67,9 +84,9 @@ def summarize_extractive(text: str, template: TemplateId) -> str:
             "Aperçu factuel (résumé automatique à partir du texte) :\n\n"
             + out
             + "\n\nPour une synthèse « décision » structurée (avantages, limites, "
-            "recommandation), activez l’option d’intelligence artificielle "
-            "(paramètre use_llm à vrai dans l’API ou la case correspondante dans Streamlit) "
-            "et configurez la variable d’environnement OPENAI_API_KEY."
+            "recommandation), activez l’option d’intelligence artificielle et configurez "
+            "soit OPENAI_API_KEY (service distant), soit un serveur **Ollama** local "
+            "(variable OLLAMA_BASE_URL, par ex. http://127.0.0.1:11434)."
         )
     return out
 
@@ -84,21 +101,6 @@ def summarize_with_openai(
     from openai import OpenAI
 
     t = transcript[:14_000]
-    prompts: dict[TemplateId, str] = {
-        "court": (
-            "Résume la transcription en exactement 3 puces courtes, en français, "
-            "sans introduction inutile."
-        ),
-        "detaille": (
-            "Produis un résumé structuré en français : contexte, points clés par "
-            "thème, et conclusion. Utilise des sous-titres Markdown (##)."
-        ),
-        "decision": (
-            "À partir de la transcription, rédige en français : avantages, "
-            "inconvénients / risques, et une recommandation claire (1 phrase). "
-            "Format Markdown avec listes."
-        ),
-    }
     client = OpenAI(api_key=api_key)
     r = client.chat.completions.create(
         model=model,
@@ -109,7 +111,7 @@ def summarize_with_openai(
             },
             {
                 "role": "user",
-                "content": f"{prompts[template]}\n\n---\nTranscription :\n{t}",
+                "content": f"{_LLM_PROMPTS[template]}\n\n---\nTranscription :\n{t}",
             },
         ],
         temperature=0.3,
@@ -119,6 +121,37 @@ def summarize_with_openai(
     return (choice or "").strip() or "(Réponse vide du modèle)"
 
 
+def summarize_with_ollama(
+    transcript: str,
+    template: TemplateId,
+    *,
+    base_url: str,
+    model: str,
+    timeout_s: float = 120.0,
+) -> str:
+    """Appelle un serveur Ollama (LAN ou machine locale) — aucune clé nuagique requise."""
+    base = base_url.strip().rstrip("/")
+    t = transcript[:14_000]
+    user_content = f"{_LLM_PROMPTS[template]}\n\n---\nTranscription :\n{t}"
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": "Tu résumes des transcriptions de vidéos en français, de façon factuelle.",
+            },
+            {"role": "user", "content": user_content},
+        ],
+        "stream": False,
+    }
+    r = httpx.post(f"{base}/api/chat", json=payload, timeout=timeout_s)
+    r.raise_for_status()
+    data = r.json()
+    msg = data.get("message") or {}
+    content = (msg.get("content") or "").strip()
+    return content or "(Réponse vide du modèle)"
+
+
 def summarize_youtube(
     url: str,
     template: TemplateId,
@@ -126,20 +159,36 @@ def summarize_youtube(
     use_llm: bool,
     openai_api_key: str | None,
     openai_model: str,
-) -> dict[str, str | int]:
+    ollama_base_url: str | None,
+    ollama_model: str,
+    ollama_timeout_s: float = 120.0,
+) -> dict[str, str | int | None]:
     vid = extract_video_id(url)
     if not vid:
         raise ValueError("URL ou identifiant YouTube invalide (11 caractères attendus).")
     transcript = fetch_transcript_text(vid)
+    fournisseur: str | None = None
     if use_llm:
-        if not openai_api_key:
-            raise ValueError(
-                "Résumé IA demandé mais OPENAI_API_KEY n'est pas configurée "
-                "(variable d'environnement)."
+        if openai_api_key:
+            summary = summarize_with_openai(
+                transcript, template, api_key=openai_api_key, model=openai_model
             )
-        summary = summarize_with_openai(
-            transcript, template, api_key=openai_api_key, model=openai_model
-        )
+            fournisseur = "openai"
+        elif ollama_base_url and ollama_base_url.strip():
+            summary = summarize_with_ollama(
+                transcript,
+                template,
+                base_url=ollama_base_url,
+                model=ollama_model,
+                timeout_s=ollama_timeout_s,
+            )
+            fournisseur = "ollama"
+        else:
+            raise ValueError(
+                "Résumé par IA demandé : renseignez OPENAI_API_KEY (service distant) "
+                "ou OLLAMA_BASE_URL (serveur Ollama sur cette machine ou sur votre réseau local, "
+                "par exemple http://127.0.0.1:11434)."
+            )
         mode = "ia"
     else:
         summary = summarize_extractive(transcript, template)
@@ -152,6 +201,7 @@ def summarize_youtube(
         "template": template,
         "summary": summary,
         "mode": mode,
+        "fournisseur_ia": fournisseur,
     }
 
 
@@ -162,8 +212,11 @@ async def summarize_youtube_async(
     use_llm: bool,
     openai_api_key: str | None,
     openai_model: str,
-) -> dict[str, str | int]:
-    """Évite de bloquer l’event loop (transcription + éventuel appel OpenAI)."""
+    ollama_base_url: str | None,
+    ollama_model: str,
+    ollama_timeout_s: float = 120.0,
+) -> dict[str, str | int | None]:
+    """Évite de bloquer l’event loop (transcription + éventuel appel IA)."""
 
     return await asyncio.to_thread(
         summarize_youtube,
@@ -172,4 +225,7 @@ async def summarize_youtube_async(
         use_llm=use_llm,
         openai_api_key=openai_api_key,
         openai_model=openai_model,
+        ollama_base_url=ollama_base_url,
+        ollama_model=ollama_model,
+        ollama_timeout_s=ollama_timeout_s,
     )

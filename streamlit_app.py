@@ -11,8 +11,12 @@ from productivity_kit.settings import get_settings
 from productivity_kit.youtube import summarize_youtube
 
 _LIBELLE_MODE: dict[str, str] = {
-    "ia": "intelligence artificielle (OpenAI)",
+    "ia": "intelligence artificielle",
     "automatique": "résumé automatique (texte seul)",
+}
+_LIBELLE_FOURNISSEUR_IA: dict[str, str] = {
+    "openai": "OpenAI (service distant)",
+    "ollama": "Ollama (machine locale ou réseau privé)",
 }
 
 st.set_page_config(
@@ -83,15 +87,23 @@ with yt_tab:
     )
     settings = get_settings()
     use_llm = st.checkbox(
-        "Utiliser l’intelligence artificielle (OpenAI)",
+        "Utiliser l’intelligence artificielle (résumé avancé)",
         value=False,
-        help="Nécessite la variable d’environnement OPENAI_API_KEY (fichier .env à côté du lancement).",
+        help="Priorité : OpenAI si OPENAI_API_KEY est définie, sinon Ollama si OLLAMA_BASE_URL est défini.",
     )
-    if use_llm and not settings.openai_api_key:
-        st.warning(
-            "La clé OPENAI_API_KEY est absente : le résumé par intelligence artificielle ne pourra pas fonctionner. "
-            "Copiez le fichier `.env.example` vers `.env` et renseignez votre clé."
-        )
+    if use_llm:
+        if settings.openai_api_key:
+            st.info("**OpenAI** sera utilisé (clé API détectée).")
+        elif settings.ollama_est_configure:
+            st.info(
+                f"**Ollama** sera utilisé : serveur `{settings.ollama_base_url.strip()}` "
+                f"— modèle `{settings.ollama_model}`."
+            )
+        else:
+            st.warning(
+                "Aucun fournisseur d’IA détecté : renseignez **OPENAI_API_KEY** ou **OLLAMA_BASE_URL** "
+                "dans le fichier `.env` (voir `.env.example`)."
+            )
     if st.button("Lancer le résumé", type="primary"):
         if not url.strip():
             st.warning("Veuillez d’abord coller une adresse YouTube.")
@@ -104,6 +116,9 @@ with yt_tab:
                         use_llm=use_llm,
                         openai_api_key=settings.openai_api_key or None,
                         openai_model=settings.openai_model,
+                        ollama_base_url=settings.ollama_base_url or None,
+                        ollama_model=settings.ollama_model,
+                        ollama_timeout_s=settings.ollama_timeout_s,
                     )
                 except ValueError as e:
                     st.error(str(e))
@@ -114,9 +129,17 @@ with yt_tab:
                     st.subheader("Texte du résumé")
                     st.markdown(out["summary"])
                     libelle = _LIBELLE_MODE.get(str(out["mode"]), str(out["mode"]))
-                    st.caption(
-                        f"Méthode utilisée : **{libelle}** — longueur de la transcription : "
+                    cap = (
+                        f"Méthode : **{libelle}** — longueur de la transcription : "
                         f"**{out['transcript_char_count']}** caractères"
                     )
+                    fv = out.get("fournisseur_ia")
+                    if fv:
+                        cap += (
+                            " — fournisseur : **"
+                            + _LIBELLE_FOURNISSEUR_IA.get(str(fv), str(fv))
+                            + "**"
+                        )
+                    st.caption(cap)
                     with st.expander("Aperçu du texte transcrit"):
                         st.text(out["transcript_preview"])

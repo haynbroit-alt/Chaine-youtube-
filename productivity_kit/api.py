@@ -40,7 +40,8 @@ app = FastAPI(
     title=_bootstrap.app_name,
     description=(
         "Application en français : résumé de vidéos YouTube (sous-titres), analyse de CSV "
-        "(fichier unique ou lot), digest e-mail et webhooks. Commencez par la page d’accueil `/` "
+        "(fichier unique ou lot), digest e-mail et webhooks. L’IA peut passer par **OpenAI** (nuage) "
+        "ou **Ollama** (machine locale ou réseau privé). Commencez par la page d’accueil `/` "
         "ou la documentation interactive ci-dessous."
     ),
     version=__version__,
@@ -102,6 +103,7 @@ def ready() -> dict[str, bool | int | str]:
         "dossier_de_rangement_defini": bool(s.organize_folder),
         "nombre_maximum_de_messages_imap": s.imap_limit,
         "cle_openai_configuree": bool(s.openai_api_key),
+        "serveur_ollama_defini": s.ollama_est_configure,
     }
 
 
@@ -119,9 +121,12 @@ def jobs_digest() -> dict[str, object]:
     "/youtube/summarize",
     tags=["YouTube"],
     summary="Résumer une vidéo",
-    description="Utilise les sous-titres publics. Résumé automatique gratuit ou résumé par IA si la clé OpenAI est renseignée.",
+    description=(
+        "Utilise les sous-titres publics. Résumé automatique gratuit, ou résumé par IA : "
+        "OpenAI (OPENAI_API_KEY) ou **Ollama** sur la machine / le réseau local (OLLAMA_BASE_URL)."
+    ),
 )
-async def youtube_summarize(body: YoutubeSummarizeRequest) -> dict[str, str | int]:
+async def youtube_summarize(body: YoutubeSummarizeRequest) -> dict[str, str | int | None]:
     s = get_settings()
     try:
         return await summarize_youtube_async(
@@ -130,6 +135,9 @@ async def youtube_summarize(body: YoutubeSummarizeRequest) -> dict[str, str | in
             use_llm=body.use_llm,
             openai_api_key=s.openai_api_key or None,
             openai_model=s.openai_model,
+            ollama_base_url=s.ollama_base_url or None,
+            ollama_model=s.ollama_model,
+            ollama_timeout_s=s.ollama_timeout_s,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -157,6 +165,9 @@ async def youtube_batch_summarize(body: YoutubeBatchRequest) -> dict[str, object
                 use_llm=body.use_llm,
                 openai_api_key=s.openai_api_key or None,
                 openai_model=s.openai_model,
+                ollama_base_url=s.ollama_base_url or None,
+                ollama_model=s.ollama_model,
+                ollama_timeout_s=s.ollama_timeout_s,
             )
             results.append({"url": url, "reussi": True, "donnees": data})
         except ValueError as e:

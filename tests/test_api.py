@@ -31,6 +31,7 @@ def test_ready_shape() -> None:
     j = c.get("/ready").json()
     assert "messagerie_imap_configuree" in j
     assert "cle_openai_configuree" in j
+    assert "serveur_ollama_defini" in j
 
 
 def test_csv_batch_summary() -> None:
