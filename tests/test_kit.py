@@ -15,5 +15,5 @@ def test_summarize_csv(tmp_path: Path) -> None:
 def test_organize_dry_run(tmp_path: Path) -> None:
     (tmp_path / "a.txt").write_text("x")
     lines = organize_folder(tmp_path, dry_run=True)
-    assert lines and "mv" in lines[0]
+    assert lines and "simulation" in lines[0]
     assert (tmp_path / "a.txt").exists()

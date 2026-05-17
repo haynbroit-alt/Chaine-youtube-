@@ -31,7 +31,7 @@ def test_youtube_summarize_mocked(monkeypatch: pytest.MonkeyPatch) -> None:
     assert r.status_code == 200
     data = r.json()
     assert data["video_id"] == "dQw4w9WgXcQ"
-    assert data["mode"] == "extractif"
+    assert data["mode"] == "automatique"
     assert "summary" in data
 
 
@@ -59,6 +59,6 @@ def test_youtube_batch_mixed(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert r.status_code == 200
     data = r.json()
-    assert data["count"] == 2
-    assert data["results"][0]["ok"] is True
-    assert data["results"][1]["ok"] is False
+    assert data["nombre"] == 2
+    assert data["resultats"][0]["reussi"] is True
+    assert data["resultats"][1]["reussi"] is False

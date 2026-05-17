@@ -23,7 +23,7 @@ def organize_folder(root: Path, *, dry_run: bool = False) -> list[str]:
         if dest_dir == root:
             continue
         if dry_run:
-            lines.append(f"mv {item} -> {dest}")
+            lines.append(f"[simulation] {item} → {dest}")
             continue
         dest_dir.mkdir(exist_ok=True)
         final = dest

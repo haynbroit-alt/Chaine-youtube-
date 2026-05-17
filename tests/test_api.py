@@ -13,21 +13,24 @@ def test_root_landing_html() -> None:
     assert "text/html" in (r.headers.get("content-type") or "")
     assert "Kit productivité" in r.text
     assert "/docs" in r.text
+    assert "documentation interactive" in r.text.lower()
 
 
 def test_health_and_version() -> None:
     c = TestClient(app)
-    assert c.get("/health").json() == {"status": "ok"}
+    assert c.get("/health").json() == {"statut": "disponible"}
     r = c.get("/version")
     assert r.status_code == 200
-    assert "version" in r.json()
+    j = r.json()
+    assert "version" in j
+    assert "nom" in j
 
 
 def test_ready_shape() -> None:
     c = TestClient(app)
     j = c.get("/ready").json()
-    assert "imap_configured" in j
-    assert "openai_configured" in j
+    assert "messagerie_imap_configuree" in j
+    assert "cle_openai_configuree" in j
 
 
 def test_csv_batch_summary() -> None:
@@ -39,8 +42,8 @@ def test_csv_batch_summary() -> None:
     r = c.post("/csv/batch-summary", files=files)
     assert r.status_code == 200
     body = r.json()
-    assert body["count"] == 2
-    assert all(item["ok"] for item in body["items"])
+    assert body["nombre"] == 2
+    assert all(f["reussi"] for f in body["fichiers"])
 
 
 def test_csv_summary_upload(tmp_path: Path) -> None:

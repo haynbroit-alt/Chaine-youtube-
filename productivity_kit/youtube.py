@@ -64,10 +64,12 @@ def summarize_extractive(text: str, template: TemplateId) -> str:
         out = out[:4497] + "…"
     if template == "decision":
         out = (
-            "Aperçu factuel (mode extractif) :\n\n"
+            "Aperçu factuel (résumé automatique à partir du texte) :\n\n"
             + out
-            + "\n\nPour une synthèse « décision » structurée (avantages / limites / "
-            "recommandation), utilisez `use_llm: true` avec `OPENAI_API_KEY` configurée."
+            + "\n\nPour une synthèse « décision » structurée (avantages, limites, "
+            "recommandation), activez l’option d’intelligence artificielle "
+            "(paramètre use_llm à vrai dans l’API ou la case correspondante dans Streamlit) "
+            "et configurez la variable d’environnement OPENAI_API_KEY."
         )
     return out
 
@@ -107,7 +109,7 @@ def summarize_with_openai(
             },
             {
                 "role": "user",
-                "content": f"{prompts[template]}\n\n---\nTRANSCRIPTION :\n{t}",
+                "content": f"{prompts[template]}\n\n---\nTranscription :\n{t}",
             },
         ],
         temperature=0.3,
@@ -138,10 +140,10 @@ def summarize_youtube(
         summary = summarize_with_openai(
             transcript, template, api_key=openai_api_key, model=openai_model
         )
-        mode = "llm"
+        mode = "ia"
     else:
         summary = summarize_extractive(transcript, template)
-        mode = "extractif"
+        mode = "automatique"
     preview = transcript[:500] + ("…" if len(transcript) > 500 else "")
     return {
         "video_id": vid,

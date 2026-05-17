@@ -4,12 +4,12 @@ import html
 
 
 def landing_page_html(*, streamlit_url: str | None) -> str:
-    """Page d’accueil HTML minimaliste (UTF-8)."""
+    """Page d'accueil HTML minimaliste (UTF-8), entièrement en français."""
     extra = ""
     if streamlit_url and streamlit_url.startswith(("http://", "https://")):
         safe = html.escape(streamlit_url, quote=True)
         extra = (
-            f'<p class="links"><a href="{safe}">Interface graphique (Streamlit)</a></p>'
+            f'<p class="links"><a href="{safe}">Ouvrir l’interface graphique (Streamlit)</a></p>'
         )
     return f"""<!DOCTYPE html>
 <html lang="fr">
@@ -42,17 +42,17 @@ def landing_page_html(*, streamlit_url: str | None) -> str:
   <div class="card">
     <h1>Kit productivité</h1>
     <p>
-      API pour <strong>résumer des vidéos YouTube</strong> (sous-titres) et
-      <strong>analyser des CSV</strong>, plus digest e-mail / webhooks.
-      Démarrez par la documentation interactive ou lancez Streamlit en local.
+      Cette application vous aide à <strong>résumer des vidéos YouTube</strong> à partir des sous-titres
+      et à <strong>analyser des fichiers CSV</strong>. Vous pouvez aussi utiliser le digest e-mail et les webhooks.
+      Commencez par la documentation ci-dessous ou par l’interface Streamlit.
     </p>
     {extra}
     <p class="links">
-      <a href="/docs">Documentation API (Swagger)</a>
-      <a href="/redoc">ReDoc</a>
-      <a href="/health">Santé</a>
+      <a href="/docs">Essayer l’API (documentation interactive)</a>
+      <a href="/redoc">Documentation alternative (ReDoc)</a>
+      <a href="/health">Vérifier que le service répond</a>
     </p>
-    <p><small>Endpoints utiles : <code>POST /youtube/summarize</code>,
+    <p><small>Adresses utiles : <code>POST /youtube/summarize</code>,
     <code>POST /csv/batch-summary</code>, <code>POST /csv/summary</code></small></p>
   </div>
 </body>

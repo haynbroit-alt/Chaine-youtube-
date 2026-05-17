@@ -13,7 +13,7 @@ def format_digest_lines(summaries: list[MailSummary]) -> list[str]:
     if not summaries:
         lines.append("Aucun message à afficher (ou boîte vide selon critères).")
         return lines
-    lines.append(f"Messages: {len(summaries)}")
+    lines.append(f"Messages : {len(summaries)}")
     for m in summaries:
         subj = m.subject or "(sans objet)"
         lines.append(f"- [{m.uid}] {subj} — {m.sender} ({m.date})")
@@ -52,9 +52,9 @@ def run_digest(settings: Settings) -> dict[str, object]:
                 timeout_s=settings.webhook_timeout_s,
             )
             webhook_status = code
-            log.append(f"Webhook HTTP {code}")
+            log.append(f"Notification webhook envoyée, code HTTP {code}")
         except Exception as e:
-            log.append(f"Webhook erreur: {e!s}")
+            log.append(f"Erreur lors de l’envoi au webhook : {e!s}")
 
     organize_lines: list[str] = []
     if settings.organize_on_digest and settings.organize_folder:
@@ -63,7 +63,7 @@ def run_digest(settings: Settings) -> dict[str, object]:
             organize_lines = organize_folder(root, dry_run=False)
             log.extend(organize_lines)
         except OSError as e:
-            log.append(f"Organize erreur: {e!s}")
+            log.append(f"Erreur lors du rangement des fichiers : {e!s}")
 
     return {
         "lines": log,

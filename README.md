@@ -1,6 +1,6 @@
 # Kit productivité
 
-Ensemble **installable et documenté** : **API FastAPI** (CSV, YouTube, digest), **interface Streamlit** (sans curl), **CLI**, **Docker**, **Vercel**, **tests**. Pensé pour une chaîne / veille / admin — sans promesse de revenus.
+Ensemble **installable et documenté** : **API FastAPI** (CSV, YouTube, digest), **interface Streamlit** (sans curl), **CLI**, **Docker**, **Vercel**, **tests**. **Interface et messages orientés français** (documentation OpenAPI, erreurs, page d’accueil). Pensé pour une chaîne / veille / admin — sans promesse de revenus.
 
 ## Fonctionnalités
 
@@ -66,16 +66,16 @@ python3 -m uvicorn productivity_kit.api:app --host 127.0.0.1 --port 8000
 | Méthode | Chemin | Rôle |
 |---------|--------|------|
 | GET | `/` | Page d’accueil HTML (liens `/docs`, Streamlit si `STREAMLIT_PUBLIC_URL`) |
-| GET | `/health` | Statut |
-| GET | `/version` | Version + nom d’app |
-| GET | `/ready` | Indicateurs de config (sans secrets) |
-| POST | `/youtube/summarize` | JSON `{ "url", "template": "court"\|"detaille"\|"decision", "use_llm" }` |
-| POST | `/youtube/batch-summarize` | JSON `{ "urls": [...], "template", "use_llm" }` (traitement séquentiel dans la réponse) |
+| GET | `/health` | Disponibilité : `{"statut": "disponible"}` |
+| GET | `/version` | `version`, `nom` |
+| GET | `/ready` | Indicateurs en français (`messagerie_imap_configuree`, `cle_openai_configuree`, …) |
+| POST | `/youtube/summarize` | JSON `{ "url", "template": "court"\|"detaille"\|"decision", "use_llm" }` — champ `mode` du résumé : `automatique` ou `ia` |
+| POST | `/youtube/batch-summarize` | JSON `urls` — réponse : `nombre`, `resultats[]` avec `reussi`, `donnees` ou `erreur` |
 | POST | `/jobs/digest` | Digest (IMAP + webhook + rangement optionnels) |
 | POST | `/csv/summary` | Un CSV : `multipart/form-data`, champ `file` |
-| POST | `/csv/batch-summary` | Plusieurs CSV : champs répétés `files` |
+| POST | `/csv/batch-summary` | Plusieurs CSV : champs répétés `files` — réponse : `nombre`, `fichiers[]` avec `reussi`, `resume` ou `erreur` |
 
-Documentation interactive : `http://127.0.0.1:8000/docs`
+La documentation interactive **/docs** (Swagger) est rédigée en **français** (titres des groupes, résumés des opérations). URL locale : `http://127.0.0.1:8000/docs`.
 
 ### Codes d’erreur (API)
 
