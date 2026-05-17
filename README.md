@@ -44,6 +44,10 @@ Onglets **CSV** et **YouTube**. Pour l’IA : `OPENAI_API_KEY` et/ou `OLLAMA_BAS
 
 Pour afficher un lien vers Streamlit sur la page d’accueil de l’API (HTML à `/`), renseignez `STREAMLIT_PUBLIC_URL` (ex. URL Streamlit Cloud).
 
+## Interface PWA (navigateur, même site que l’API)
+
+Une **mini-application** est servie sous **`/pwa/`** : résumé YouTube (`POST /youtube/summarize`) et analyse CSV (`POST /csv/summary`), sans URL codée en dur (utilise `window.location.origin`). Fichiers dans `public/pwa/` (`manifest.json`, `sw.js`, `icon.svg`). Depuis la page d’accueil `/`, un lien **« Interface PWA »** est proposé.
+
 ## CLI
 
 ```bash
@@ -65,8 +69,8 @@ python3 -m uvicorn productivity_kit.api:app --host 127.0.0.1 --port 8000
 
 | Méthode | Chemin | Rôle |
 |---------|--------|------|
-| GET | `/` | Page d’accueil HTML (liens `/docs`, Streamlit si `STREAMLIT_PUBLIC_URL`) |
-| GET | `/health` | Disponibilité : `{"statut": "disponible"}` |
+| GET | `/` | Page d’accueil HTML (liens `/docs`, `/pwa/`, Streamlit si `STREAMLIT_PUBLIC_URL`) |
+| GET | `/pwa/` | Application légère (formulaires YouTube + CSV, installable) |
 | GET | `/version` | `version`, `nom` |
 | GET | `/ready` | Indicateurs en français (`messagerie_imap_configuree`, `cle_openai_configuree`, `serveur_ollama_defini`, …) |
 | POST | `/youtube/summarize` | JSON avec `use_llm` : priorité **OpenAI** si clé présente, sinon **Ollama** si `OLLAMA_BASE_URL` — champ `fournisseur_ia` dans la réponse (`openai` / `ollama` / `null`) |
@@ -118,7 +122,7 @@ Le fichier `pyproject.toml` contient une section `[project]` (dépendances pour 
 
 | Idée | Statut |
 |------|--------|
-| Interface visuelle simple | **Fait** : Streamlit + page `/` en HTML |
+| Interface visuelle simple | **Fait** : Streamlit + page `/` + **PWA** `/pwa/` |
 | Lots CSV / lots YouTube (réponse unique) | **Fait** : `/csv/batch-summary`, `/youtube/batch-summarize` |
 | Jobs async + `job_id` + file d’attente | **Pas fait** (Redis/Celery ou Upstash recommandé pour la prod) |
 | Export PDF / e-mail / Drive | **Pas fait** |

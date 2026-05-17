@@ -1,6 +1,6 @@
 [project]
 name = "chaine-youtube-kit"
-version = "0.3.2"
+version = "0.3.3"
 description = "Kit productivité : FastAPI (YouTube, CSV, digest) + interface Streamlit"
 readme = "README.md"
 requires-python = ">=3.11"

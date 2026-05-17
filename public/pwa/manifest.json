@@ -1,0 +1,19 @@
+{
+  "name": "Kit productivité",
+  "short_name": "KitProd",
+  "description": "Résumé YouTube et analyse CSV",
+  "start_url": "/pwa/",
+  "scope": "/pwa/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1E3A8A",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/pwa/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

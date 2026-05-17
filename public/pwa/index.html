@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Kit productivité</title>
+  <link rel="manifest" href="/pwa/manifest.json">
+  <link rel="icon" href="/pwa/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/pwa/icon.svg">
+  <meta name="theme-color" content="#1E3A8A">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; padding: 1rem; padding-bottom: env(safe-area-inset-bottom, 1rem); }
+    .container { max-width: 600px; margin: 0 auto; }
+    .card { background: white; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #1E3A8A; }
+    h2 { font-size: 1.2rem; margin-bottom: 1rem; color: #374151; }
+    input, select, button { width: 100%; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; }
+    button { background: #1E3A8A; color: white; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .result { background: #f9fafb; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem; white-space: pre-wrap; font-size: 0.9rem; border-left: 4px solid #1E3A8A; word-break: break-word; }
+    .status { margin-bottom: 1rem; padding: 0.5rem; border-radius: 0.5rem; background: #e5e7eb; text-align: center; font-size: 0.85rem; }
+    .badge { display: inline-block; padding: 0.2rem 0.5rem; background: #10B981; color: white; border-radius: 999px; font-size: 0.7rem; margin-left: 0.5rem; vertical-align: middle; }
+    .hint { font-size: 0.8rem; color: #6b7280; margin-bottom: 0.75rem; }
+    a.doc { color: #1E3A8A; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Kit productivité <span class="badge">PWA</span></h1>
+  <p class="hint">Même origine que l’API (<code id="originLabel"></code>). <a class="doc" href="/docs">Documentation API</a> · <a class="doc" href="/">Accueil</a></p>
+  <div class="status" id="status">Vérification du service…</div>
+
+  <div class="card">
+    <h2>Résumé YouTube</h2>
+    <p class="hint">Utilise l’endpoint <code>POST /youtube/summarize</code> (sous-titres publics). Ce n’est pas le digest e-mail.</p>
+    <input type="url" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=…" autocomplete="url">
+    <select id="youtubeTemplate" aria-label="Modèle de résumé">
+      <option value="court">Court</option>
+      <option value="detaille">Détaillé</option>
+      <option value="decision">Décision (mieux avec IA)</option>
+    </select>
+    <label class="hint" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+      <input type="checkbox" id="youtubeUseLlm" style="width:auto;margin:0;"> Résumé par intelligence artificielle (OpenAI ou Ollama selon la configuration serveur)
+    </label>
+    <button type="button" id="btnYoutube">Résumer la vidéo</button>
+    <div id="youtubeResult" class="result" hidden></div>
+  </div>
+
+  <div class="card">
+    <h2>Analyse CSV</h2>
+    <p class="hint">Fichier UTF-8 · <code>POST /csv/summary</code></p>
+    <input type="file" id="csvFile" accept=".csv,text/csv">
+    <button type="button" id="btnCsv">Analyser le fichier</button>
+    <div id="csvResult" class="result" hidden></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = window.location.origin;
+  document.getElementById('originLabel').textContent = API_BASE;
+
+  const statusDiv = document.getElementById('status');
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/pwa/sw.js', { scope: '/pwa/' }).catch(() => {});
+  }
+
+  async function checkHealth() {
+    try {
+      const res = await fetch(`${API_BASE}/health`);
+      const data = await res.json();
+      const s = data.statut || data.status || 'OK';
+      statusDiv.textContent = 'Service disponible : ' + s;
+      statusDiv.style.background = '#d1fae5';
+    } catch (e) {
+      statusDiv.textContent = 'Service injoignable. Vérifiez la connexion ou l’URL de déploiement.';
+      statusDiv.style.background = '#fee2e2';
+    }
+  }
+
+  async function summarizeYouTube(url) {
+    const resultDiv = document.getElementById('youtubeResult');
+    resultDiv.hidden = false;
+    resultDiv.textContent = 'Traitement en cours…';
+    const btn = document.getElementById('btnYoutube');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/youtube/summarize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          template: document.getElementById('youtubeTemplate').value,
+          use_llm: document.getElementById('youtubeUseLlm').checked,
+        }),
+      });
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); } catch { throw new Error(raw.slice(0, 200)); }
+      if (!res.ok) {
+        const msg = data.detail || data.message || res.statusText;
+        throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      }
+      const parts = [
+        data.summary || '',
+        '',
+        '— Métadonnées —',
+        'Mode : ' + (data.mode || '') + (data.fournisseur_ia ? ' (' + data.fournisseur_ia + ')' : ''),
+        'Modèle : ' + (data.template || ''),
+        'Caractères transcrits : ' + (data.transcript_char_count ?? ''),
+      ];
+      resultDiv.textContent = parts.join('\n');
+    } catch (e) {
+      resultDiv.textContent = 'Erreur : ' + (e && e.message ? e.message : String(e));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function analyzeCSV(file) {
+    const resultDiv = document.getElementById('csvResult');
+    resultDiv.hidden = false;
+    resultDiv.textContent = 'Analyse en cours…';
+    const btn = document.getElementById('btnCsv');
+    btn.disabled = true;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(`${API_BASE}/csv/summary`, { method: 'POST', body: formData });
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); } catch { throw new Error(raw.slice(0, 200)); }
+      if (!res.ok) {
+        const msg = data.detail || res.statusText;
+        throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      }
+      resultDiv.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      resultDiv.textContent = 'Erreur : ' + (e && e.message ? e.message : String(e));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('btnYoutube').addEventListener('click', () => {
+    const url = document.getElementById('youtubeUrl').value.trim();
+    if (!url) { alert('Collez une adresse YouTube.'); return; }
+    summarizeYouTube(url);
+  });
+  document.getElementById('btnCsv').addEventListener('click', () => {
+    const file = document.getElementById('csvFile').files[0];
+    if (!file) { alert('Choisissez un fichier CSV.'); return; }
+    analyzeCSV(file);
+  });
+
+  checkHealth();
+  setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>

@@ -51,6 +51,7 @@ def landing_page_html(*, streamlit_url: str | None) -> str:
       <a href="/docs">Essayer l’API (documentation interactive)</a>
       <a href="/redoc">Documentation alternative (ReDoc)</a>
       <a href="/health">Vérifier que le service répond</a>
+      <a href="/pwa/">Interface PWA (YouTube + CSV)</a>
     </p>
     <p><small>Adresses utiles : <code>POST /youtube/summarize</code>,
     <code>POST /csv/batch-summary</code>, <code>POST /csv/summary</code></small></p>

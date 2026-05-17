@@ -252,3 +252,10 @@ async def csv_batch_summary(
             entree["code_http"] = e.status_code
         elements.append(entree)
     return {"nombre": len(elements), "fichiers": elements}
+
+
+_pwa_dir = Path(__file__).resolve().parent.parent / "public" / "pwa"
+if _pwa_dir.is_dir():
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/pwa", StaticFiles(directory=str(_pwa_dir), html=True), name="pwa")
