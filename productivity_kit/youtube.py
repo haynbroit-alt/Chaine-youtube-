@@ -5,14 +5,21 @@ import re
 from typing import Literal
 
 import httpx
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import (
+    CouldNotRetrieveTranscript,
+    RequestBlocked,
+    YouTubeTranscriptApi,
+)
+from youtube_transcript_api.proxies import GenericProxyConfig
 
-TemplateId = Literal["court", "detaille", "decision"]
+from productivity_kit.settings import get_settings
 
 YOUTUBE_RE = re.compile(
     r"(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})",
     re.IGNORECASE,
 )
+
+TemplateId = Literal["court", "detaille", "decision"]
 
 _LLM_PROMPTS: dict[TemplateId, str] = {
     "court": (
@@ -31,6 +38,26 @@ _LLM_PROMPTS: dict[TemplateId, str] = {
 }
 
 
+def _transcript_error_message(exc: CouldNotRetrieveTranscript) -> str:
+    if isinstance(exc, RequestBlocked):
+        return (
+            "YouTube refuse l’accès aux sous-titres depuis l’IP de ce serveur "
+            "(cas fréquent sur Vercel, AWS, Google Cloud, Azure, etc.). "
+            "Configurez YOUTUBE_PROXY_URL (proxy HTTP ou HTTPS, de préférence résidentiel) "
+            "dans les variables d’environnement, ou exécutez l’API depuis une connexion résidentielle."
+        )
+    return "Impossible d’obtenir les sous-titres pour cette vidéo."
+
+
+def _youtube_api() -> YouTubeTranscriptApi:
+    s = get_settings()
+    url = (s.youtube_proxy_url or "").strip()
+    if url:
+        cfg = GenericProxyConfig(http_url=url, https_url=url)
+        return YouTubeTranscriptApi(proxy_config=cfg)
+    return YouTubeTranscriptApi()
+
+
 def extract_video_id(url: str) -> str | None:
     u = url.strip()
     m = YOUTUBE_RE.search(u)
@@ -42,27 +69,30 @@ def extract_video_id(url: str) -> str | None:
 
 
 def fetch_transcript_text(video_id: str) -> str:
-    api = YouTubeTranscriptApi()
-    tlist = api.list(video_id)
-    langs = ["fr", "fr-FR", "en", "en-US"]
+    api = _youtube_api()
     try:
-        tr = tlist.find_transcript(langs)
-    except Exception:
+        tlist = api.list(video_id)
+        langs = ["fr", "fr-FR", "en", "en-US"]
         try:
-            tr = next(iter(tlist))
-        except StopIteration as e:
-            raise ValueError("Aucune piste de sous-titres pour cette vidéo.") from e
-    try:
-        data = tr.fetch()
-    except Exception as e:
-        raise ValueError(
-            "Impossible de récupérer les sous-titres (vidéo privée, réseau, ou erreur YouTube)."
-        ) from e
-    parts: list[str] = []
-    for part in data:
-        t = part.get("text", "") if isinstance(part, dict) else ""
-        parts.append(t.replace("\n", " "))
-    return " ".join(parts).strip()
+            tr = tlist.find_transcript(langs)
+        except Exception:
+            try:
+                tr = next(iter(tlist))
+            except StopIteration as e:
+                raise ValueError("Aucune piste de sous-titres pour cette vidéo.") from e
+        try:
+            data = tr.fetch()
+        except Exception as e:
+            raise ValueError(
+                "Impossible de récupérer les sous-titres (vidéo privée, réseau, ou erreur YouTube)."
+            ) from e
+        parts: list[str] = []
+        for part in data:
+            t = part.get("text", "") if isinstance(part, dict) else ""
+            parts.append(t.replace("\n", " "))
+        return " ".join(parts).strip()
+    except CouldNotRetrieveTranscript as e:
+        raise ValueError(_transcript_error_message(e)) from e
 
 
 def summarize_extractive(text: str, template: TemplateId) -> str:

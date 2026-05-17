@@ -48,10 +48,11 @@ app = FastAPI(
     openapi_tags=_TAGS,
 )
 
-if _bootstrap.cors_origins_list:
+_cors_origins = _bootstrap.cors_origins_list()
+if _cors_origins:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_bootstrap.cors_origins_list,
+        allow_origins=_cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -131,6 +132,7 @@ def ready() -> dict[str, bool | int | str]:
         "nombre_maximum_de_messages_imap": s.imap_limit,
         "cle_openai_configuree": bool(s.openai_api_key),
         "serveur_ollama_defini": s.ollama_est_configure,
+        "proxy_youtube_defini": bool(s.youtube_proxy_url.strip()),
     }
 
 

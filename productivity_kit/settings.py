@@ -45,7 +45,11 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.2:3b"
     ollama_timeout_s: float = 120.0
 
-    @property
+    youtube_proxy_url: str = Field(
+        default="",
+        description="Proxy HTTP(S) pour les requêtes sous-titres YouTube (contournement blocage IP cloud / Vercel)",
+    )
+
     def cors_origins_list(self) -> list[str]:
         raw = self.cors_origins.strip()
         if not raw:

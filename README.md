@@ -75,7 +75,7 @@ python3 -m uvicorn productivity_kit.api:app --host 127.0.0.1 --port 8000
 | GET | `/icon-192.png`, `/icon-512.png` | Icônes PWA |
 | GET | `/health` | Disponibilité : `{"statut": "disponible"}` |
 | GET | `/version` | `version`, `nom` |
-| GET | `/ready` | Indicateurs en français (`messagerie_imap_configuree`, `cle_openai_configuree`, `serveur_ollama_defini`, …) |
+| GET | `/ready` | Indicateurs en français (`messagerie_imap_configuree`, `cle_openai_configuree`, `serveur_ollama_defini`, `proxy_youtube_defini`, …) |
 | POST | `/youtube/summarize` | JSON avec `use_llm` : priorité **OpenAI** si clé présente, sinon **Ollama** si `OLLAMA_BASE_URL` — champ `fournisseur_ia` dans la réponse (`openai` / `ollama` / `null`) |
 | POST | `/youtube/batch-summarize` | JSON `urls` — réponse : `nombre`, `resultats[]` avec `reussi`, `donnees` ou `erreur` |
 | POST | `/jobs/digest` | Digest (IMAP + webhook + rangement optionnels) |
@@ -86,13 +86,13 @@ La documentation interactive **/docs** (Swagger) est rédigée en **français** 
 
 ### Codes d’erreur (API)
 
-- **400** : paramètre invalide (URL, encodage CSV, clé OpenAI manquante si `use_llm`) — message en français dans `detail`.
+- **400** : paramètre invalide (URL, encodage CSV, clé OpenAI manquante si `use_llm`, sous-titres indisponibles ou **IP bloquée par YouTube** sans proxy) — message en français dans `detail`.
 - **404** : fichier introuvable (rare côté upload).
-- **502** : erreur réseau / fournisseur (ex. YouTube ou OpenAI).
+- **502** : erreur réseau / fournisseur inattendue (ex. OpenAI ou exception non gérée côté transcription).
 
 ## Variables d’environnement
 
-Voir `.env.example` : `API_*`, `CORS_ORIGINS`, `IMAP_*`, `WEBHOOK_*`, `ORGANIZE_*`, **`OPENAI_*`**, **`OLLAMA_*`**, **`STREAMLIT_PUBLIC_URL`**.
+Voir `.env.example` : `API_*`, `CORS_ORIGINS`, `IMAP_*`, `WEBHOOK_*`, `ORGANIZE_*`, **`OPENAI_*`**, **`OLLAMA_*`**, **`YOUTUBE_PROXY_URL`**, **`STREAMLIT_PUBLIC_URL`**.
 
 - **`ORGANIZE_ON_DIGEST=true`** : lors d’un digest, range aussi `ORGANIZE_FOLDER` (à utiliser avec prudence).
 - **`IMAP_UNSEEN_ONLY=true`** : ne liste que les non lus.
@@ -120,6 +120,8 @@ Ce dépôt est une **application Python** (FastAPI + Streamlit), pas une applica
 ## Vercel
 
 Le fichier `pyproject.toml` contient une section `[project]` (dépendances pour `uv lock`) et `[tool.vercel] entrypoint = "productivity_kit.api:app"`. Le fichier `api/index.py` réexporte aussi `app`. **Streamlit** n’est pas exécuté sur Vercel par ce dépôt : déployez-le sur [Streamlit Community Cloud](https://streamlit.io/cloud) ou en local, puis renseignez `STREAMLIT_PUBLIC_URL` sur Vercel.
+
+**YouTube** : la récupération des sous-titres passe par `youtube-transcript-api`. YouTube bloque souvent les adresses IP de **nuages** (dont l’infrastructure derrière Vercel). Pour que `POST /youtube/summarize` fonctionne en production, définissez **`YOUTUBE_PROXY_URL`** dans les variables d’environnement du projet Vercel vers un **proxy HTTP(S)** dont l’IP n’est pas bloquée (souvent un proxy résidentiel ou dédié, selon votre fournisseur). L’endpoint **`GET /ready`** expose **`proxy_youtube_defini`** (sans divulguer l’URL du proxy).
 
 ## Feuille de route (par rapport aux pistes produit)
 
