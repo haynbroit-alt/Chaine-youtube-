@@ -6,11 +6,13 @@ from fastapi.testclient import TestClient
 from productivity_kit.api import app
 
 
-def test_root_redirects_to_docs() -> None:
+def test_root_landing_html() -> None:
     c = TestClient(app)
-    r = c.get("/", follow_redirects=False)
-    assert r.status_code == 307
-    assert r.headers.get("location") == "/docs"
+    r = c.get("/")
+    assert r.status_code == 200
+    assert "text/html" in (r.headers.get("content-type") or "")
+    assert "Kit productivité" in r.text
+    assert "/docs" in r.text
 
 
 def test_health_and_version() -> None:
@@ -25,6 +27,20 @@ def test_ready_shape() -> None:
     c = TestClient(app)
     j = c.get("/ready").json()
     assert "imap_configured" in j
+    assert "openai_configured" in j
+
+
+def test_csv_batch_summary() -> None:
+    c = TestClient(app)
+    files = [
+        ("files", ("a.csv", b"x,y\n1,2\n", "text/csv")),
+        ("files", ("b.csv", b"a\nb\n", "text/csv")),
+    ]
+    r = c.post("/csv/batch-summary", files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 2
+    assert all(item["ok"] for item in body["items"])
 
 
 def test_csv_summary_upload(tmp_path: Path) -> None:

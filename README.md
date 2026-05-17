@@ -1,16 +1,18 @@
 # Kit productivité
 
-Ensemble **installable et documenté** pour automatiser en local : **API HTTP**, **CLI**, **CSV**, **rangement de fichiers**, **messagerie IMAP**, **webhooks**, **digest planifiable**, **Docker** et **tests**. À brancher sur une activité réelle (veille, chaîne, admin) — sans promesse de revenus.
+Ensemble **installable et documenté** : **API FastAPI** (CSV, YouTube, digest), **interface Streamlit** (sans curl), **CLI**, **Docker**, **Vercel**, **tests**. Pensé pour une chaîne / veille / admin — sans promesse de revenus.
 
 ## Fonctionnalités
 
 | Zone | Détail |
 |------|--------|
-| API | `FastAPI` : santé, version, état de config, digest, résumé CSV uploadé |
+| Interface | **Streamlit** (`streamlit_app.py`) : déposer un CSV, coller une URL YouTube → résumé |
+| API | **FastAPI** : santé, version, page d’accueil HTML, digest, CSV simple / **lot**, **YouTube** (sous-titres) |
+| YouTube | Résumé **extractif** (gratuit) ou **OpenAI** (`OPENAI_API_KEY`, modèles `OPENAI_MODEL`) |
 | CLI | `python -m productivity_kit` : `serve`, `csv-summary`, `organize`, `mail-list`, `digest`, `version` |
 | Fichiers | Classement par extension (module + script) |
-| E-mail | Lecture IMAP (en-têtes uniquement, `BODY.PEEK[HEADER]`) |
-| Notifications | POST JSON vers `WEBHOOK_URL` (Slack, Discord incoming, n8n, etc.) |
+| E-mail | Lecture IMAP (en-têtes, `BODY.PEEK[HEADER]`) |
+| Notifications | POST JSON vers `WEBHOOK_URL` |
 | Planification | Exemple `schedules/crontab.example` |
 | Conteneur | `Dockerfile` + `docker-compose.yml` |
 
@@ -26,8 +28,21 @@ Copiez la configuration :
 
 ```bash
 cp .env.example .env
-# éditez .env (IMAP et webhook sont optionnels)
+# éditez .env (IMAP, webhook, OpenAI : optionnels selon usage)
 ```
+
+## Interface Streamlit (priorité « grand public »)
+
+Lancez l’UI locale (même dépôt, même `.env` que l’API si vous partagez les clés) :
+
+```bash
+cd /chemin/vers/le/repo
+python3 -m streamlit run streamlit_app.py
+```
+
+Onglets **CSV** et **YouTube**. Pour les résumés IA, renseignez `OPENAI_API_KEY` dans `.env`.
+
+Pour afficher un lien vers Streamlit sur la page d’accueil de l’API (HTML à `/`), renseignez `STREAMLIT_PUBLIC_URL` (ex. URL Streamlit Cloud).
 
 ## CLI
 
@@ -50,18 +65,27 @@ python3 -m uvicorn productivity_kit.api:app --host 127.0.0.1 --port 8000
 
 | Méthode | Chemin | Rôle |
 |---------|--------|------|
-| GET | `/` | Redirection vers `/docs` (interface Swagger) |
+| GET | `/` | Page d’accueil HTML (liens `/docs`, Streamlit si `STREAMLIT_PUBLIC_URL`) |
 | GET | `/health` | Statut |
 | GET | `/version` | Version + nom d’app |
 | GET | `/ready` | Indicateurs de config (sans secrets) |
-| POST | `/jobs/digest` | Lance le digest (effets de bord possibles : webhook, rangement) |
-| POST | `/csv/summary` | `multipart/form-data`, champ `file` = `.csv` UTF-8 |
+| POST | `/youtube/summarize` | JSON `{ "url", "template": "court"\|"detaille"\|"decision", "use_llm" }` |
+| POST | `/youtube/batch-summarize` | JSON `{ "urls": [...], "template", "use_llm" }` (traitement séquentiel dans la réponse) |
+| POST | `/jobs/digest` | Digest (IMAP + webhook + rangement optionnels) |
+| POST | `/csv/summary` | Un CSV : `multipart/form-data`, champ `file` |
+| POST | `/csv/batch-summary` | Plusieurs CSV : champs répétés `files` |
 
 Documentation interactive : `http://127.0.0.1:8000/docs`
 
+### Codes d’erreur (API)
+
+- **400** : paramètre invalide (URL, encodage CSV, clé OpenAI manquante si `use_llm`) — message en français dans `detail`.
+- **404** : fichier introuvable (rare côté upload).
+- **502** : erreur réseau / fournisseur (ex. YouTube ou OpenAI).
+
 ## Variables d’environnement
 
-Voir `.env.example` : `API_*`, `CORS_ORIGINS`, `IMAP_*`, `WEBHOOK_*`, `ORGANIZE_*`.
+Voir `.env.example` : `API_*`, `CORS_ORIGINS`, `IMAP_*`, `WEBHOOK_*`, `ORGANIZE_*`, **`OPENAI_*`**, **`STREAMLIT_PUBLIC_URL`**.
 
 - **`ORGANIZE_ON_DIGEST=true`** : lors d’un digest, range aussi `ORGANIZE_FOLDER` (à utiliser avec prudence).
 - **`IMAP_UNSEEN_ONLY=true`** : ne liste que les non lus.
@@ -77,7 +101,19 @@ L’API écoute sur le port **8000** du conteneur.
 
 ## Vercel
 
-Le fichier `pyproject.toml` contient une section `[project]` (dépendances runtime pour `uv lock` sur Vercel) et `[tool.vercel] entrypoint = "productivity_kit.api:app"`, comme décrit pour le [déploiement FastAPI sur Vercel](https://vercel.com/docs/frameworks/backend/fastapi). Le fichier `api/index.py` réexporte aussi `app` pour les builds qui ne lisent que les chemins conventionnels. Définissez les variables d’environnement dans le projet Vercel (équivalent de `.env`).
+Le fichier `pyproject.toml` contient une section `[project]` (dépendances pour `uv lock`) et `[tool.vercel] entrypoint = "productivity_kit.api:app"`. Le fichier `api/index.py` réexporte aussi `app`. **Streamlit** n’est pas exécuté sur Vercel par ce dépôt : déployez-le sur [Streamlit Community Cloud](https://streamlit.io/cloud) ou en local, puis renseignez `STREAMLIT_PUBLIC_URL` sur Vercel.
+
+## Feuille de route (par rapport aux pistes produit)
+
+| Idée | Statut |
+|------|--------|
+| Interface visuelle simple | **Fait** : Streamlit + page `/` en HTML |
+| Lots CSV / lots YouTube (réponse unique) | **Fait** : `/csv/batch-summary`, `/youtube/batch-summarize` |
+| Jobs async + `job_id` + file d’attente | **Pas fait** (Redis/Celery ou Upstash recommandé pour la prod) |
+| Export PDF / e-mail / Drive | **Pas fait** |
+| Bot Telegram / Discord | **Pas fait** |
+| Cache résultats YouTube | **Pas fait** |
+| Statistiques d’usage | **Pas fait** |
 
 ## Tests
 
@@ -91,4 +127,4 @@ Les scripts sous `scripts/` restent utilisables ; la CLI les remplace pour un fl
 
 ## Sécurité
 
-Ne commitez pas `.env`. Les mots de passe IMAP ne sont jamais journalisés par ce kit ; limitez les droits du fichier `.env` sur votre machine.
+Ne commitez pas `.env`. Les mots de passe et clés API ne sont pas journalisés par ce kit ; limitez les droits du fichier `.env` sur votre machine.

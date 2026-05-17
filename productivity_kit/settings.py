@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     organize_folder: str = ""
     organize_on_digest: bool = False
 
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    streamlit_public_url: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         raw = self.cors_origins.strip()
