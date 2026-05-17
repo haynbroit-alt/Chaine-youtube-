@@ -46,7 +46,7 @@ Pour afficher un lien vers Streamlit sur la page d’accueil de l’API (HTML à
 
 ## Interface PWA (navigateur, même site que l’API)
 
-Une **mini-application** est servie sous **`/pwa/`** : résumé YouTube (`POST /youtube/summarize`) et analyse CSV (`POST /csv/summary`), sans URL codée en dur (utilise `window.location.origin`). Le fichier **`/manifest.json`** (installable, `start_url` : `/`) et les icônes **`/icon-192.png`**, **`/icon-512.png`** sont à la racine du dossier `public/`. Un **service worker** minimal reste sous `/pwa/sw.js`.
+Une **mini-application** est servie sous **`/pwa/`** : résumé YouTube (`POST /youtube/summarize`) et analyse CSV (`POST /csv/summary`), sans URL codée en dur (utilise `window.location.origin`). Le fichier **`/manifest.json`** (installable, `start_url` : `/`) et les icônes **`/icon-192.png`**, **`/icon-512.png`** sont à la racine du dossier `public/`. Un **service worker** minimal reste sous `/pwa/sw.js` (cache `kitprod-v1` : `/`, `/pwa/`, manifest, icônes ; requêtes **GET** seulement).
 
 ## CLI
 
